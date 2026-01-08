@@ -24,22 +24,12 @@ def call_function(function_call, verbose=False):
 
   if function_name in function_map:
     function_result = function_map[function_name](working_dir, **function_call.args)
-    return types.Content(
-        role="tool",
-        parts=[
-            types.Part.from_function_response(
-                name=function_name,
-                response={"result": function_result},
-            )
-        ],
+    return types.Part.from_function_response(
+        name=function_name,
+        response={"result": function_result},
     )
   else:
-    return types.Content(
-        role="tool",
-        parts=[
-            types.Part.from_function_response(
-                name=function_name,
-                response={"error": f"Unknown function: {function_name}"},
-            )
-        ],
+    return types.Part.from_function_response(
+        name=function_name,
+        response={"error": f"Unknown function: {function_name}"},
     )

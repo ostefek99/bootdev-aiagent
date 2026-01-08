@@ -36,27 +36,42 @@ def generate_content(client, messages, verbose=False):
         tools=[available_functions], system_instruction=system_prompt
     )
 
-    response = client.models.generate_content(
-        model=gemini_ai_model,
-        contents=messages,
-        config=config,
-    )
+    for _ in range(20):
+        response = client.models.generate_content(
+            model=gemini_ai_model,
+            contents=messages,
+            config=config,
+        )
 
-    if response is None or response.usage_metadata is None:
-        raise RuntimeError("Gemini API response appears to be malformed")
+        if response is None or response.usage_metadata is None:
+            raise RuntimeError("Gemini API response appears to be malformed")
 
-    if response.function_calls:
-        for function_call in response.function_calls:
-            result = call_function(function_call, verbose)
-            print(result)
+        if response.candidates:
+            for candidate in response.candidates:
+                if candidate.content:
+                    messages.append(candidate.content)
 
-    if verbose:
-        print("User prompt:", messages)
-        print("Prompt tokens:", response.usage_metadata.prompt_token_count)
-        print("Response tokens:", response.usage_metadata.candidates_token_count)
-        print("Response:")
+        function_responses = []
+        if response.function_calls:
+            for function_call in response.function_calls:
+                function_responses.append(call_function(function_call, verbose))
 
-    print(response.text)
+        if function_responses:
+            messages.append(types.Content(role="user", parts=function_responses))
+            continue
+
+        if verbose:
+            print("User prompt:", messages)
+            print("Prompt tokens:", response.usage_metadata.prompt_token_count)
+            print("Response tokens:", response.usage_metadata.candidates_token_count)
+            print("Response:")
+
+        print("Final response:")
+        print(response.text)
+        return
+
+    print("Error: Maximum iterations reached without a final response")
+    raise SystemExit(1)
 
 
 def main() -> None:
